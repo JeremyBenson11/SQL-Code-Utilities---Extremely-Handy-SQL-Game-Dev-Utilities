@@ -1,6 +1,6 @@
 All software in the .zip file is written in HTML and JS. Simply double-click the HTML files to launch them in the default web browser.
 
-There are two plagues coming along with game design when working in SQL. Unique end tokens and fields that need the same text at every point. These work loads actually take up hours of time. I got fed up, so I created SQL Field Dump and Tokenizer with a little help of AI. Both these utilities work beautifully.
+There are two plagues coming along with game design when working in SQL. Unique end tokens and fields that need the same text at every point. These work loads actually take up hours of time. I got fed up, so I created SQL Field Dump and Tokenizer with a little help of AI. Both of these utilities work beautifully.
 
 **SQL Field Dump**<br> 
 SQL Field Dump takes copied text and adds it to every data point at the same location of the data point at the paste location. Press Ctrl+a to add selected text to the Copy Board.
