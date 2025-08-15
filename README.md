@@ -8,7 +8,7 @@ SQL Field Dump takes copied text and adds it to every data point at the same loc
 **Tokenizer**<br> 
 With the click of a button every end field will have a unique token.
 
-**Zip Contents**
+**Zip Contents**<br>
 sql_field_dump.html
 tokenizer.html
 A tutorial folder with jpg images and a .txt file.
