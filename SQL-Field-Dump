@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SQL Field Insert</title>
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+    header {
+        padding: 20px;
+        background-color: #333;
+        color: white;
+    }
+    textarea {
+        flex: 1;
+        width: 100%;
+        font-size: 18px;
+        padding: 10px;
+        box-sizing: border-box;
+        resize: none;
+    }
+    button {
+        padding: 10px;
+        font-size: 16px;
+        cursor: pointer;
+        border: none;
+        background-color: #d9534f;
+        color: white;
+    }
+    button:hover {
+        background-color: #c9302c;
+    }
+</style>
+</head>
+<body>
+    <header>
+        <h1>SQL Field Insert</h1>
+        <p>Copy items one at a time or as a list separated by spaces, and dump them starting from the selected field in the paste set.</p>
+        <button id="clearBtn">Clear Copy Board</button>
+    </header>
+    <textarea id="textArea" placeholder="Paste or type here..."></textarea>
+
+    <script>
+        const collectedItems = [];
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            collectedItems.length = 0;
+        });
+
+        function getLineIndexAndColumn(text, caretPos) {
+            const lines = text.split(/\r?\n/);
+            let acc = 0;
+            for (let i = 0; i < lines.length; i++) {
+                const len = lines[i].length;
+                if (caretPos <= acc + len) {
+                    return { lines, lineIndex: i, column: caretPos - acc };
+                }
+                acc += len + 1;
+            }
+            return { lines, lineIndex: lines.length - 1, column: lines[lines.length - 1].length };
+        }
+
+        function findFirstTupleInLine(line) {
+            const re = /\([^)]*\)/;
+            const m = re.exec(line);
+            return m ? { open: m.index, close: m.index + m[0].length, raw: m[0] } : null;
+        }
+
+        function splitFields(tupleRaw) {
+            return tupleRaw.slice(1, -1).split(/\s*,\s*/);
+        }
+
+        function joinFields(parts) {
+            return '(' + parts.join(', ') + ')';
+        }
+
+        function isQuoted(str) {
+            const t = str.trim();
+            return t.startsWith("'") && t.endsWith("'");
+        }
+
+        function countCommasBeforeIndex(line, tupleOpen, indexInLine) {
+            const start = tupleOpen + 1;
+            const end = Math.max(start, Math.min(indexInLine, line.length));
+            let count = 0;
+            for (let i = start; i < end; i++) {
+                if (line[i] === ',') count++;
+            }
+            return count;
+        }
+
+        function replaceFieldInTuple(tupleRaw, fieldIndex, value) {
+            const parts = splitFields(tupleRaw);
+            if (fieldIndex < 0) fieldIndex = 0;
+            if (fieldIndex >= parts.length) return tupleRaw;
+
+            const target = parts[fieldIndex];
+            if (isQuoted(target)) {
+                parts[fieldIndex] = `'${value}'`;
+            } else {
+                parts[fieldIndex] = value;
+            }
+            return joinFields(parts);
+        }
+
+        document.addEventListener('keydown', function(event) {
+            const textarea = document.getElementById('textArea');
+            if (event.ctrlKey && event.key.toLowerCase() === 'a') {
+                event.preventDefault();
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                if (start !== end) {
+                    const selectedText = textarea.value.substring(start, end);
+                    const items = selectedText.split(/\s+/).map(s => s.trim()).filter(Boolean);
+                    collectedItems.push(...items);
+
+                    const before = textarea.value.substring(0, start);
+                    const after = textarea.value.substring(end);
+                    textarea.value = before + after;
+                    textarea.setSelectionRange(start, start);
+                }
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            const textarea = document.getElementById('textArea');
+            if (!(event.ctrlKey && event.key.toLowerCase() === 'i')) return;
+            event.preventDefault();
+
+            if (collectedItems.length === 0) return;
+
+            const caretPos = textarea.selectionStart;
+            const info = getLineIndexAndColumn(textarea.value, caretPos);
+            const lines = info.lines;
+            const startLine = info.lineIndex;
+            const column = info.column;
+
+            const tupleOnCaretLine = findFirstTupleInLine(lines[startLine]);
+            if (!tupleOnCaretLine) return;
+
+            const fieldIndex = countCommasBeforeIndex(lines[startLine], tupleOnCaretLine.open, column);
+
+            let arrIndex = 0;
+            for (let li = startLine; li < lines.length && arrIndex < collectedItems.length; li++) {
+                const line = lines[li];
+                if (line.trim() === '') break;
+
+                const tup = findFirstTupleInLine(line);
+                if (!tup) continue;
+
+                const before = line.slice(0, tup.open);
+                const after = line.slice(tup.close);
+                const value = collectedItems[arrIndex++];
+
+                const replacedTuple = replaceFieldInTuple(tup.raw, fieldIndex, value);
+                lines[li] = before + replacedTuple + after;
+            }
+
+            const newText = lines.join('\n');
+            textarea.value = newText;
+            textarea.setSelectionRange(caretPos, caretPos);
+        });
+    </script>
+</body>
+</html>
