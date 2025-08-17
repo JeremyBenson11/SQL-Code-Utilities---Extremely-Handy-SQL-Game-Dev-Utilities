@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>SQL Field Insert</title>
+<title>SQL Field Dump</title>
 <style>
     body {
         margin: 0;
@@ -39,8 +39,9 @@
 </head>
 <body>
     <header>
-        <h1>SQL Field Insert</h1>
+        <h1>SQL Field Dump</h1>
         <p>Copy items one at a time or as a list separated by spaces, and dump them starting from the selected field in the paste set.</p>
+		<p>Press Ctr+A to add highlighted text to the Copy Board. Press <strong>Ctrl+I to insert at caret location.</strong></p>
         <button id="clearBtn">Clear Copy Board</button>
     </header>
     <textarea id="textArea" placeholder="Paste or type here..."></textarea>
