@@ -8,6 +8,9 @@ SQL Field Dump takes copied text and adds it to every data point at the same loc
 **Tokenizer**<br> 
 With the click of a button every end field will have a unique token.
 
+**SQL Field Math Tool**<br>
+Do math operations on a field within a set. Ei field 1 becomes 20000/ field 2.
+
 **Zip Contents**<br>
 sql_field_dump.html<br>
 tokenizer.html<br>
