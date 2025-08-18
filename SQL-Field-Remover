@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SQL Field Remover</title>
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+    header {
+        padding: 20px;
+        background-color: #333;
+        color: white;
+    }
+    textarea {
+        flex: 1;
+        width: 100%;
+        font-size: 18px;
+        padding: 10px;
+        box-sizing: border-box;
+        resize: none;
+    }
+    .controls {
+        display: flex;
+        gap: 10px;
+        padding: 10px;
+        background: #f4f4f4;
+        flex-wrap: wrap;
+    }
+    input, button, label {
+        font-size: 16px;
+    }
+    input {
+        padding: 5px;
+        width: 80px;
+    }
+    button {
+        padding: 6px 12px;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+    <header>
+        <h1>SQL Field Remover</h1>
+        <p>Removes the <strong>n-th field</strong> (1-based index) from each tuple.</p>
+    </header>
+
+    <div class="controls">
+        <label>Remove Field #
+            <input type="number" id="removeField" min="1" value="1">
+        </label>
+        <button id="removeBtn">Remove</button>
+    </div>
+
+    <textarea id="textArea" placeholder="Paste your SQL tuples here..."></textarea>
+
+    <script>
+        // Split fields safely, respecting quoted strings
+        function splitFields(tupleRaw) {
+            const inside = tupleRaw.slice(1, -1); // remove outer ()
+            const re = /'(?:''|[^'])*'|[^,]+/g;   // quoted OR unquoted tokens
+            return inside.match(re).map(f => f.trim());
+        }
+
+        function joinFields(parts) {
+            return '(' + parts.join(', ') + ')';
+        }
+
+        function findFirstTupleInLine(line) {
+            const re = /\([^)]*\)/;
+            const m = re.exec(line);
+            return m ? { open: m.index, close: m.index + m[0].length, raw: m[0] } : null;
+        }
+
+        document.getElementById('removeBtn').addEventListener('click', () => {
+            const textarea = document.getElementById('textArea');
+            const lines = textarea.value.split(/\r?\n/);
+
+            const removeIdx = parseInt(document.getElementById('removeField').value, 10) - 1;
+            if (removeIdx < 0) return;
+
+            for (let i = 0; i < lines.length; i++) {
+                const tup = findFirstTupleInLine(lines[i]);
+                if (!tup) continue;
+
+                let parts = splitFields(tup.raw);
+                if (removeIdx >= parts.length) continue; // skip if index too high
+
+                parts.splice(removeIdx, 1); // remove the chosen field
+
+                lines[i] = lines[i].slice(0, tup.open) + joinFields(parts) + lines[i].slice(tup.close);
+            }
+
+            textarea.value = lines.join("\n");
+        });
+    </script>
+</body>
+</html>
