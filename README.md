@@ -17,3 +17,6 @@ tokenizer.html<br>
 A tutorial folder with jpg images and a .txt file.
 
 Thanks for checking this out. Feel free to use this however you like.
+
+**Disclaimer**<br>
+These are fairly experimental, use at own risk. Test thoroughly, and inspect data each time.
