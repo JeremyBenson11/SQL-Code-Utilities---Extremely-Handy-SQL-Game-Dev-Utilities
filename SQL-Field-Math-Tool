@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SQL Field Math Tool</title>
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+    header {
+        padding: 20px;
+        background-color: #333;
+        color: white;
+    }
+    textarea {
+        flex: 1;
+        width: 100%;
+        font-size: 18px;
+        padding: 10px;
+        box-sizing: border-box;
+        resize: none;
+    }
+    .controls {
+        display: flex;
+        gap: 10px;
+        padding: 10px;
+        background: #f4f4f4;
+        flex-wrap: wrap;
+    }
+    select, input, button, label {
+        font-size: 16px;
+    }
+    input, select {
+        padding: 5px;
+    }
+    button {
+        padding: 6px 10px;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+    <header>
+        <h1>SQL Field Math Tool</h1>
+        <p>
+            Result: <strong>Target = Number (op) Source</strong> &nbsp;|&nbsp; 
+            Fields are 1-based. &nbsp;|&nbsp; Flip → <strong>Source (op) Number</strong>
+        </p>
+    </header>
+
+    <div class="controls">
+        <label>Target Field
+            <input type="number" id="fieldTarget" min="1" value="1" style="width:70px;">
+        </label>
+        <label>Operation
+            <select id="operation">
+                <option value="+">+</option>
+                <option value="-">-</option>
+                <option value="*">*</option>
+                <option value="/">/</option>
+            </select>
+        </label>
+        <label>Source Field
+            <input type="number" id="fieldSource" min="1" value="2" style="width:70px;">
+        </label>
+        <label>Number
+            <input type="number" id="mathValue" value="1" step="any" style="width:100px;">
+        </label>
+        <label>Rounding
+            <select id="rounding">
+                <option value="none">none</option>
+                <option value="up">up</option>
+                <option value="down">down</option>
+            </select>
+        </label>
+        <label>
+            <input type="checkbox" id="flipOrder"> Flip Order
+        </label>
+        <button id="applyBtn">Apply</button>
+    </div>
+
+    <textarea id="textArea" placeholder="Paste your SQL tuples here..."></textarea>
+
+    <script>
+        // Split fields safely, respecting quoted strings
+        function splitFields(tupleRaw) {
+            const inside = tupleRaw.slice(1, -1); // remove outer ()
+            const re = /'(?:''|[^'])*'|[^,]+/g;   // match quoted OR unquoted tokens
+            return inside.match(re).map(f => f.trim());
+        }
+
+        function joinFields(parts) {
+            return '(' + parts.join(', ') + ')';
+        }
+
+        function isQuoted(str) {
+            const t = str.trim();
+            return t.startsWith("'") && t.endsWith("'");
+        }
+
+        function findFirstTupleInLine(line) {
+            const re = /\([^)]*\)/;
+            const m = re.exec(line);
+            return m ? { open: m.index, close: m.index + m[0].length, raw: m[0] } : null;
+        }
+
+        document.getElementById('applyBtn').addEventListener('click', () => {
+            const textarea = document.getElementById('textArea');
+            const lines = textarea.value.split(/\r?\n/);
+
+            const targetIdx = parseInt(document.getElementById('fieldTarget').value, 10) - 1;
+            const sourceIdx = parseInt(document.getElementById('fieldSource').value, 10) - 1;
+            const op = document.getElementById('operation').value;
+            const constant = parseFloat(document.getElementById('mathValue').value);
+            const rounding = document.getElementById('rounding').value;
+            const flip = document.getElementById('flipOrder').checked;
+
+            if (isNaN(constant)) return;
+
+            for (let i = 0; i < lines.length; i++) {
+                const tup = findFirstTupleInLine(lines[i]);
+                if (!tup) continue;
+
+                let parts = splitFields(tup.raw);
+                if (targetIdx < 0 || targetIdx >= parts.length) continue;
+                if (sourceIdx < 0 || sourceIdx >= parts.length) continue;
+
+                const sourceRaw = parts[sourceIdx].trim();
+                const targetRaw = parts[targetIdx].trim();
+
+                if (isQuoted(sourceRaw)) continue; // skip quoted source
+
+                const sourceNum = parseFloat(sourceRaw);
+                if (!isFinite(sourceNum)) continue;
+
+                let result;
+                if (!flip) {
+                    // number op source
+                    switch (op) {
+                        case '+': result = constant + sourceNum; break;
+                        case '-': result = constant - sourceNum; break;
+                        case '*': result = constant * sourceNum; break;
+                        case '/': 
+                            if (sourceNum === 0) continue;
+                            result = constant / sourceNum;
+                            break;
+                    }
+                } else {
+                    // source op number
+                    switch (op) {
+                        case '+': result = sourceNum + constant; break;
+                        case '-': result = sourceNum - constant; break;
+                        case '*': result = sourceNum * constant; break;
+                        case '/': 
+                            if (constant === 0) continue;
+                            result = sourceNum / constant;
+                            break;
+                    }
+                }
+
+                // Apply rounding
+                if (rounding === "up") result = Math.ceil(result);
+                if (rounding === "down") result = Math.floor(result);
+
+                // Preserve quotes if target was quoted
+                parts[targetIdx] = isQuoted(targetRaw) ? `'${result}'` : String(result);
+
+                lines[i] = lines[i].slice(0, tup.open) + joinFields(parts) + lines[i].slice(tup.close);
+            }
+
+            textarea.value = lines.join("\n");
+        });
+    </script>
+</body>
+</html>
